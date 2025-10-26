@@ -5,6 +5,19 @@
 #include "MemTrack_export.h"
 
 
+MemTrack_API char* safe_strdup(const char *src){
+    return strdup(src);
+}
+
+MemTrack_API void* safe_realloc(void *memory, size_t size){
+    return realloc(memory, size);
+}
+
+MemTrack_API void* safe_malloc(size_t size){
+    return malloc(size);
+}
+
+
 MemTrack_API void safe_free(void **mem){
 
     if(!(*mem) || !mem)
