@@ -7,7 +7,7 @@
 
 MemTrack_API void safe_free(void **mem){
 
-    if(!(*mem))
+    if(!(*mem) || !mem)
         return;
 
     free(*mem);
@@ -22,7 +22,7 @@ MemTrack_API void debug_free(void **mem, char *file, int line){
         return;
     }
 
-    if(!(*mem))
+    if(!(*mem) || !mem)
         return;
 
     if(delete_allocation(*mem)){

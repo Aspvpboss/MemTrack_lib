@@ -4,11 +4,10 @@ It helps track and fix memory leaks involved with your program.
 For each allocation it tracks: size, file, and file line
 
 
-#define TRACK_ALLOCATIONS
+-DTRACK_ALLOCATIONS
 
 
-define TRACK_ALLOCATIONS to enable tracking, otherwise it use the normal malloc, realloc, strdup. However
-it will use a custom free function. All it does is automatically NULL your free pointer
+use -DTRACK_ALLOCATIONS when compiling to enable tracking, otherwise it use the normal malloc, realloc, strdup. However it will use a custom free function. All it does is automatically NULL your free pointer
 
 
 notable functions

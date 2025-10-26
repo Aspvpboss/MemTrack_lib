@@ -16,11 +16,11 @@ default: build run
 
 
 build_lib:
-	${GCC} lib/src/alloc.c lib/src/linked_list.c -o ${DLL_OUTPUT} -DDLL_EXPORTS ${DLL_FLAGS} ${INCLUDE_LIB} ${FLAGS}  
+	@${GCC} -O2 -march=native -flto lib/src/alloc.c lib/src/linked_list.c -o ${DLL_OUTPUT} -DDLL_EXPORTS ${DLL_FLAGS} ${INCLUDE_LIB} ${FLAGS}  
 
 build: 
-	@${GCC} ${SRC_LIB} -o ${OUTPUT} -DSTATIC_LINK ${INCLUDE_LIB} ${FLAGS}  
-
+	@${GCC} ${SRC_LIB} -o ${OUTPUT} -DSTATIC_LINK  ${INCLUDE_LIB} ${FLAGS}  
+#-DTRACK_ALLOCATIONS
 run:
 	@${OUTPUT}
 

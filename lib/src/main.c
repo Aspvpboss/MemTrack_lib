@@ -1,4 +1,4 @@
-#define TRACK_ALLOCATIONS
+
 
 #include "MemTrack.h"
 #include <stdio.h>
