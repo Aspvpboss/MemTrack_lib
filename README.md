@@ -39,9 +39,11 @@ notable functions
         returns 1 for memory leak, returns 0 for no memory leak
 
 example program
+
+
+
 ```
 
-#define TRACK_ALLOCATIONS
 
 #include "MemTrack.h"
 #include <stdio.h>

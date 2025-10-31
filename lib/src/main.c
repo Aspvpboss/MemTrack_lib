@@ -2,18 +2,24 @@
 
 #include "MemTrack.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int main(void){
 
-    int *array = t_malloc(sizeof(int) * 10);
+    if(!malloc(9223372036854)){
+        printf("dub\n");
+    }
 
-    array[2] = 1;
+    // int *array = t_malloc(-1);
 
+    //array[2] = 1;
+
+    // t_free(array);
 
     if(check_memory_leak())
         print_tracking_info();
 
-    t_free(array);
+    
 
     free_tracking_info();
 
