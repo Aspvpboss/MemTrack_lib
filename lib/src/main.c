@@ -4,10 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void malloc_failure(void *data){
+    printf("dub\n");
+}
+
 int main(void){
 
-    if(!malloc(9223372036854)){
-        printf("dub\n");
+    Set_Malloc_Error_Function(malloc_failure, NULL);
+
+    if(!t_malloc(929999923374)){
+        
+        return 1;
     }
 
     // int *array = t_malloc(-1);

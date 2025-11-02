@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+//if you don't call this, then no functions will be called if malloc returns NULL
+MemTrack_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
 
 MemTrack_API void safe_free(void **mem);
 MemTrack_API void* safe_malloc(size_t size);
