@@ -4,47 +4,77 @@
 #include "MemTrack_linked_list.h"
 #include "MemTrack_export.h"
 
-static void(*fail_handler)(void*) = NULL;
-static void *handler_arg = NULL;
 
-MemTrack_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg){
+static MemTrack_Context *ctx = NULL;
 
-    fail_handler = function;
-    handler_arg = function_arg;
+int check_context_init(){
+
+    if(!ctx){
+        fprintf(stderr, "MemTrack ERROR: Set_MemTrack_Context hasn't been called yet\naborting program\n");
+        abort();
+        return 0;
+    }
+        
+
+    return 1;
+}
+
+
+MemTrack_API void Set_MemTrack_Context(MemTrack_Context *e_ctx){
+
+    ctx = e_ctx;
+    ctx->config.auto_null_pointers = false;
+    ctx->config.memory_failure_abort = false;
+    ctx->config.print_error_info = false;
 
 }
 
 
-MemTrack_API void check_malloc_error(void *mem){
+MemTrack_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg){
 
-    if(mem)
+    if(!check_context_init())
+        return;
+    ctx->fail_handler = function;
+    ctx->handler_arg = function_arg;
+
+    return;
+}
+
+
+
+
+
+void check_malloc_error(void *mem){
+
+    if(mem || !check_context_init())
         return;
 
-    if(fail_handler)
-        (*fail_handler)(handler_arg);
+    if(ctx->fail_handler)
+        (*ctx->fail_handler)(ctx->handler_arg);
 
-    fprintf(stderr, "MemTrack ERROR: malloc failed\n");
+    
+    if(ctx->config.print_error_info)
+        fprintf(stderr, "MemTrack ERROR: malloc failed\n");
 
-    #ifdef MEMORY_FAILIURE_ABORT
+    if(ctx->config.memory_failure_abort)
         abort();
-    #endif
     
     return; 
 }
 
-MemTrack_API void debug_check_malloc_error(void *mem, char *file, int line){
+void debug_check_malloc_error(void *mem, char *file, int line){
 
-    if(mem)
+    if(mem || !check_context_init())
         return;
 
-    if(fail_handler)
-        (*fail_handler)(handler_arg);
+    if(ctx->fail_handler)
+        (*ctx->fail_handler)(ctx->handler_arg);
 
-    fprintf(stderr, "MemTrack ERROR: malloc failed for file %s, line - %d\n", file, line);
-
-    #ifdef MEMORY_FAILIURE_ABORT
+    if(ctx->config.print_error_info)
+        fprintf(stderr, "MemTrack ERROR: malloc failed for file %s, line - %d\n", file, line);
+    
+    if(ctx->config.memory_failure_abort)
         abort();
-    #endif
     
     return; 
 }
@@ -75,38 +105,36 @@ MemTrack_API void safe_free(void **mem){
         return;
 
     free(*mem);
-    *mem = NULL;
+
+    if(ctx->config.auto_null_pointers)
+        *mem = NULL;
 
 }
 
 MemTrack_API void debug_free(void **mem, char *file, int line){
 
-    if(!file){
-        printf("MemTrack ERROR: debug_free doesn't accept 'NULL' into 'char *file'\n");
-        return;
-    }
-
     if(!mem || !(*mem))
         return;
 
     if(delete_allocation(*mem)){
-        printf("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+
+        if(ctx->config.print_error_info)
+            fprintf(stderr, "MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+
         return;
     }
     free(*mem);
-    *mem = NULL;
+
+    if(ctx->config.auto_null_pointers)
+        *mem = NULL;
     
 }
 
 
 MemTrack_API void* debug_malloc(size_t size, char *file, int line){
 
-    if(!file){
-        printf("MemTrack ERROR: debug_free doesn't accept 'NULL' into 'char *file'\n");
-        return NULL;
-    }
-
     void *mem = malloc(size);
+
     debug_check_malloc_error(mem, file, line);
     if(!mem)
         return NULL;
@@ -114,7 +142,10 @@ MemTrack_API void* debug_malloc(size_t size, char *file, int line){
 
     if(append_allocation(mem, file, line, size)){
         free(mem);
-        printf("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+
+        if(ctx->config.print_error_info)
+            fprintf(stderr, "MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+
         return NULL;    
     }
 
@@ -124,12 +155,6 @@ MemTrack_API void* debug_malloc(size_t size, char *file, int line){
 
 MemTrack_API void* debug_realloc(void *mem, size_t size, char *file, int line){
 
-    if(!file){
-        printf("MemTrack ERROR: debug_free doesn't accept 'NULL' into 'char *file'\n");
-        return NULL;
-    }
-
-
     if(!mem){
         void *new_mem = debug_malloc(size, file, line);
         return new_mem;
@@ -137,7 +162,10 @@ MemTrack_API void* debug_realloc(void *mem, size_t size, char *file, int line){
         
 
     if(delete_allocation(mem)){
-        printf("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+
+        if(ctx->config.print_error_info)
+            fprintf(stderr, "MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+
         return NULL;
     }
     
@@ -150,7 +178,10 @@ MemTrack_API void* debug_realloc(void *mem, size_t size, char *file, int line){
 
     if(append_allocation(new_mem, file, line, size)){
         free(new_mem);
-        printf("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+
+        if(ctx->config.print_error_info)
+            fprintf(stderr, "MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+
         return NULL;            
     }
 
@@ -160,15 +191,8 @@ MemTrack_API void* debug_realloc(void *mem, size_t size, char *file, int line){
 
 MemTrack_API char* debug_strdup(const char* src, char *file, int line){
 
-    if(!file){
-        printf("MemTrack ERROR: debug_free doesn't accept 'NULL' into 'char *file'\n");
+    if(!src)
         return NULL;
-    }
-
-    if(!src){
-        printf("MemTrack ERROR: debug_strdup doesn't accept 'NULL' into 'char *src' for file %s, line - %d\n", file, line);
-        return NULL;
-    }
 
     size_t src_len = strlen(src);
 

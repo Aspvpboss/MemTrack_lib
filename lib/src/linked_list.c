@@ -65,7 +65,7 @@ MemTrack_API void print_tracking_info(){
 }
 
 
-MemTrack_API int append_allocation(void *ptr, char *file, int line, size_t size){
+int append_allocation(void *ptr, char *file, int line, size_t size){
     Mem_Info *node = malloc(sizeof(Mem_Info));
     if(!node)
         return 1;
@@ -94,7 +94,7 @@ MemTrack_API int append_allocation(void *ptr, char *file, int line, size_t size)
 }
 
 
-MemTrack_API int delete_allocation(void *check_ptr){
+int delete_allocation(void *check_ptr){
     Mem_Info *current = head;
     Mem_Info *prev = NULL;
 

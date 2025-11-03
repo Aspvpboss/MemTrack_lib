@@ -6,17 +6,22 @@
 #include <string.h>
 #include <stdlib.h>
 
+
 //if you don't call this, then no functions will be called if malloc returns NULL
 MemTrack_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
+
+MemTrack_API void Set_MemTrack_Context(MemTrack_Context *e_ctx);
 
 MemTrack_API void safe_free(void **mem);
 MemTrack_API void* safe_malloc(size_t size);
 MemTrack_API void* safe_realloc(void *memory, size_t size);
 MemTrack_API char* safe_strdup(const char *src);
+
 MemTrack_API void debug_free(void **mem, char *file, int line);
 MemTrack_API void* debug_malloc(size_t size, char *file, int line);
 MemTrack_API void* debug_realloc(void *mem, size_t size, char *file, int line);
 MemTrack_API char* debug_strdup(const char* src, char *file, int line);
+
 
 
 #ifdef TRACK_ALLOCATIONS
@@ -55,6 +60,7 @@ MemTrack_API char* debug_strdup(const char* src, char *file, int line);
 
 
 #endif
+
 
 
 #endif

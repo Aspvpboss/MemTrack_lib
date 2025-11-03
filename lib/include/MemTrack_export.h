@@ -4,7 +4,7 @@
 
 #ifdef _WIN32
     #ifdef DLL_EXPORTS
-        #define MemTrack_API __declspec(dllexport)
+        #define MemTrack_API __attribute__((dllexport))
     #elif defined(STATIC_LINK)
         #define MemTrack_API
     #else 
