@@ -16,7 +16,7 @@ default: build run
 
 #-O2 -march=native
 build_lib:
-	@${GCC} -DDLL_EXPORTS  ${SRC_LIB} -o ${DLL_OUTPUT} ${DLL_FLAGS} ${INCLUDE_LIB} ${FLAGS}  
+	@${GCC} -O2 -DDLL_EXPORTS  ${SRC_LIB} -o ${DLL_OUTPUT} ${DLL_FLAGS} ${INCLUDE_LIB} ${FLAGS}  
 
 build: build_lib 
 	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -lMemTrack -L. -DTRACK_ALLOCATIONS  ${FLAGS}  
