@@ -10,6 +10,7 @@
 //if you don't call this, then no functions will be called if malloc returns NULL
 MemTrack_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
 
+//you must call this *before* you set the values within MemTrack_Context
 MemTrack_API void Set_MemTrack_Context(MemTrack_Context *e_ctx);
 
 MemTrack_API void safe_free(void **mem);
