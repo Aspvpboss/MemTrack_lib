@@ -34,13 +34,28 @@ MemTrack_API char* debug_strdup(const char* src, char *file, int line);
 
     /*
     void t_free(void **mem);
-    auto NULL's pointer
     */
     #define t_free(ptr) debug_free((void**)&ptr, __FILE__, __LINE__)
 
     //char *t_strdup(char *str);
     #define t_strdup(str) debug_strdup(str, __FILE__, __LINE__)
-    
+ 
+#elif defined(STDLIB_ALLOCATIONS)
+ 
+    //void *t_malloc(size_t size);
+    #define t_malloc(size) malloc(size)
+
+    //void *t_realloc(void *ptr, size_t size);
+    #define t_realloc(ptr, size) realloc(ptr, size)
+
+    /*
+    void free(void *mem);
+    */
+    #define t_free(ptr) free(ptr)
+
+    //char *t_strdup(char *str);
+    #define t_strdup(str) strdup(str)
+
 #else
 
     //void *t_malloc(size_t size);
