@@ -31,7 +31,7 @@ extern "C"{
     DOCUMENTATION
 
     This library tracks allocations and can report memory leaks; furthermore, it can also
-    get heap usage and automatically null pointers after freeing them and exiting if malloc fails.
+    get heap usage and automatically null pointers after freeing them and exiting the program if malloc fails.
 
     I wrote this library in a way to configure it as you want. If you just want to track allocations when debugging, then
     only use the normal malloc and free during runtime you can do that. Or if you want it to null pointers when freed
@@ -51,17 +51,57 @@ extern "C"{
 
     INITIALIZING 
 
-    First, you must create a MemTrack_Context variable, either using malloc or the stack (whichever you prefer).
-    Then, you must call the function Set_MemTrack_Context(), and pass in the pointer of the defined MemTrack_Context.
+        First, you must create a MemTrack_Context variable, either using malloc or the stack (whichever you prefer).
+        Then, you must call the function Set_MemTrack_Context(), and pass in the pointer of the defined MemTrack_Context.
 
-    After that you can set the specific configs of memtrack using the MemTrack_Context. Very important, the configs only work
-    if you aren't using STDLIB_ALLOCATIONS so be aware.
+        After that you can set the specific configs of memtrack using the MemTrack_Context. 
+        
+        These are the vars you can configs in MemTrack_Context, Importantly, the configs only work
+        if you aren't using STDLIB_ALLOCATIONS so be aware.
 
-    These are the vars you can configs in MemTrack_Context
+            bool memory_failure_abort; if true, will exit program if malloc fails
+            bool auto_null_pointers; if true, will automatically set freed pointers to null
+            bool print_error_info; if true, will print debug info with memtrack_print functions
 
-        bool memory_failure_abort;
-        bool auto_null_pointers;
-        bool print_error_info;
+        Optionally, if the memory_failure_abort config is true, you can set a function to run before the program
+        exit. Use the Set_Malloc_Error_Function() to set the function and data, it won't fail or crash if memory_failure_abort
+        is false
+
+        Set_Malloc_Error_Function() takes a functions pointer that returns void and takes a void* as a parameter, then 
+        the void *data 
+
+        Internally when the function is called, it passes the void *data into the function
+
+    
+    USING MEMTRACK 
+
+    Here are the main functions and macros this library provides 
+    
+    FUNCTIONS
+
+        size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
+        void print_tracking_info(); // prints all tracking information
+        void free_tracking_info(); //
+        int check_memory_leak();
+
+        //if you don't call this, then no functions will be called if malloc returns NULL
+        void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
+
+        //you must call this *before* you set the values within MemTrack_Context because it zeros all values
+        void Set_MemTrack_Context(MemTrack_Context *e_ctx);
+
+    MACROS 
+
+        These macro definitions change depending on what global macro you define
+
+        void* t_malloc(size_t size);
+
+        void* t_realloc(void *mem, size_t size);
+        
+        void t_free(void *mem); 
+
+        char* t_strdup(const char *string);
+
 
 */
 
@@ -98,8 +138,6 @@ size_t check_memory_usage();
 void print_tracking_info();
 void free_tracking_info();
 int check_memory_leak();
-int append_allocation(void *ptr, char *file, int line, size_t size);
-int delete_allocation(void *check_ptr);
 
 
 #include <string.h>
