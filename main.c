@@ -1,6 +1,8 @@
-#include "MemTrack.h"
+#define MEMTRACK_IMPLEMENTATION 
+
+#include "memtrack.h"
 #include <stdio.h>
-#include <stdlib.h>
+
 
 void malloc_failure(void *data){
     printf("\ndub\n");

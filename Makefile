@@ -2,7 +2,7 @@
 GCC = gcc
 
 
-INCLUDE_LIB = -Ilib/include
+INCLUDE_LIB = -IMemTrack
 SRC_LIB = lib/src/*.c
 
 
@@ -12,14 +12,13 @@ OUTPUT = out.exe
 DLL_FLAGS = -fPIC -shared  -Wl,--out-implib,libMemTrack.a
 DLL_OUTPUT = libMemTrack.dll
 
-default: build run
+default: json build run
 
-#-O2 -march=native
-build_lib:
-	@${GCC} -O2 -DDLL_EXPORTS  ${SRC_LIB} -o ${DLL_OUTPUT} ${DLL_FLAGS} ${INCLUDE_LIB} ${FLAGS}  
+json:
+	@compiledb -n -- make build
 
-build: build_lib 
-	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -lMemTrack -L. -DTRACK_ALLOCATIONS  ${FLAGS}  
+build:  
+	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS  ${FLAGS}  
 
 run:
 	@${OUTPUT}
