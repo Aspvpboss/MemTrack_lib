@@ -20,13 +20,6 @@
     SOFTWARE.
 */
 
-#ifndef MEMTRACK_H
-#define MEMTRACK_H 
-
-#ifdef __cplusplus 
-extern "C"{
-#endif
-
 /*
     DOCUMENTATION
 
@@ -49,6 +42,9 @@ extern "C"{
 
     NO MACRO defined - this doesn't track allocations, however it still uses my malloc and free functions 
                        which allows for auto nulling pointers and exiting if malloc failure
+
+    Uncomment the macro MEMTRACK_DLL (at the beginning of the header guard) for using this with a dll, 
+    then when compiling use MEMTRACK_BUILD_DLL global macro to use properly export for windows
 
 
     INITIALIZING 
@@ -159,18 +155,35 @@ extern "C"{
 */
 
 
+#ifndef MEMTRACK_H
+#define MEMTRACK_H 
+
+#ifdef __cplusplus 
+extern "C"{
+#endif
+
+// uncomment this for use in DLLs
+// #define MEMTRACK_DLL
+
+#if defined(MEMTRACK_DLL)
+
+    #if defined(_WIN32)
+        #if defined(MEMTRACK_BUILD_DLL)
+            #define MEMTRACK_API __declspec(dllexport)
+        #else
+            #define MEMTRACK_API __declspec(dllimport)
+        #endif
+    #else
+        #define MEMTRACK_API __attribute__((visibility("default")))
+    #endif
+
+#else
+    #define MEMTRACK_API
+#endif
+
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct Mem_Info{
-
-    struct Mem_Info *next;
-    size_t size;
-    void *ptr;
-    char *file_name;
-    int file_line;
-
-} Mem_Info;
 
 
 typedef struct{
@@ -187,10 +200,10 @@ typedef struct{
 } MemTrack_Context;
 
 
-size_t check_memory_usage();
-void print_tracking_info();
-void free_tracking_info();
-int check_memory_leak();
+MEMTRACK_API size_t check_memory_usage();
+MEMTRACK_API void print_tracking_info();
+MEMTRACK_API void free_tracking_info();
+MEMTRACK_API int check_memory_leak();
 
 
 #include <string.h>
@@ -198,20 +211,20 @@ int check_memory_leak();
 
 
 //if you don't call this, then no functions will be called if malloc returns NULL
-void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
+MEMTRACK_API void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
 
 //you must call this *before* you set the values within MemTrack_Context
-void Set_MemTrack_Context(MemTrack_Context *e_ctx);
+MEMTRACK_API void Set_MemTrack_Context(MemTrack_Context *e_ctx);
 
-void safe_free(void **mem);
-void* safe_malloc(size_t size);
-void* safe_realloc(void *memory, size_t size);
-char* safe_strdup(const char *src);
+MEMTRACK_API void safe_free(void **mem);
+MEMTRACK_API void* safe_malloc(size_t size);
+MEMTRACK_API void* safe_realloc(void *memory, size_t size);
+MEMTRACK_API char* safe_strdup(const char *src);
 
-void debug_free(void **mem, char *file, int line);
-void* debug_malloc(size_t size, char *file, int line);
-void* debug_realloc(void *mem, size_t size, char *file, int line);
-char* debug_strdup(const char* src, char *file, int line);
+MEMTRACK_API void debug_free(void **mem, char *file, int line);
+MEMTRACK_API void* debug_malloc(size_t size, char *file, int line);
+MEMTRACK_API void* debug_realloc(void *mem, size_t size, char *file, int line);
+MEMTRACK_API char* debug_strdup(const char* src, char *file, int line);
 
 
 
@@ -277,6 +290,18 @@ char* debug_strdup(const char* src, char *file, int line);
 #include <string.h>
 #include <stdio.h>
 
+
+typedef struct Mem_Info{
+
+    struct Mem_Info *next;
+    size_t size;
+    void *ptr;
+    char *file_name;
+    int file_line;
+
+} Mem_Info;
+
+
 //linked_list.c
 
 static Mem_Info *head = NULL;
@@ -340,7 +365,7 @@ void print_tracking_info(){
 }
 
 
-int append_allocation(void *ptr, char *file, int line, size_t size){
+static int append_allocation(void *ptr, char *file, int line, size_t size){
     Mem_Info *node = malloc(sizeof(Mem_Info));
     if(!node)
         return 1;
@@ -369,7 +394,7 @@ int append_allocation(void *ptr, char *file, int line, size_t size){
 }
 
 
-int delete_allocation(void *check_ptr){
+static int delete_allocation(void *check_ptr){
     Mem_Info *current = head;
     Mem_Info *prev = NULL;
 
@@ -416,7 +441,7 @@ int delete_allocation(void *check_ptr){
 
 static MemTrack_Context *ctx = NULL;
 
-int check_context_init(){
+static int check_context_init(){
 
     if(!ctx){
         fprintf(stderr, "MemTrack ERROR: Set_MemTrack_Context hasn't been called yet\naborting program\n");
@@ -453,7 +478,7 @@ void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg){
 
 
 
-void check_malloc_error(void *mem){
+static void check_malloc_error(void *mem){
 
     if(mem || !check_context_init())
         return;
@@ -471,7 +496,7 @@ void check_malloc_error(void *mem){
     return; 
 }
 
-void debug_check_malloc_error(void *mem, char *file, int line){
+static void debug_check_malloc_error(void *mem, char *file, int line){
 
     if(mem || !check_context_init())
         return;
