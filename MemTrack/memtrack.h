@@ -332,7 +332,7 @@ void print_tracking_info(){
 
     printf("\nAllocation Information\n");
     while(current){
-        printf("Address %p - size %lld - Line %d - File %s\n", current->ptr, current->size, current->file_line, current->file_name);
+        printf("Address %p - size %zu - Line %d - File %s\n", current->ptr, current->size, current->file_line, current->file_name);
         current = current->next;
     }
     printf("\n");
@@ -466,7 +466,7 @@ void check_malloc_error(void *mem){
         fprintf(stderr, "MemTrack ERROR: malloc failed\n");
 
     if(ctx->config.memory_failure_abort)
-        abort();
+        exit(EXIT_FAILURE);
     
     return; 
 }
@@ -483,7 +483,7 @@ void debug_check_malloc_error(void *mem, char *file, int line){
         fprintf(stderr, "MemTrack ERROR: malloc failed for file %s, line - %d\n", file, line);
     
     if(ctx->config.memory_failure_abort)
-        abort();
+        exit(EXIT_FAILURE);
     
     return; 
 }

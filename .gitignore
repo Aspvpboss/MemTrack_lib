@@ -1,4 +1,4 @@
 .vscode
-out.exe
+*.exe
 .cache
 compile_commands.json
