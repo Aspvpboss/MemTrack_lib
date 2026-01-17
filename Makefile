@@ -9,8 +9,7 @@ SRC_LIB = lib/src/*.c
 FLAGS = -Wall -Werror -Wpedantic -pedantic
 OUTPUT = out.exe
 
-DLL_FLAGS = -fPIC -shared  -Wl,--out-implib,libMemTrack.a
-DLL_OUTPUT = libMemTrack.dll
+
 
 default: json build run
 
