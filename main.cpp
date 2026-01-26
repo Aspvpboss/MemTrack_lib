@@ -1,3 +1,4 @@
+
 #define MEMTRACK_IMPLEMENTATION 
 
 #include "memtrack.h"
@@ -11,7 +12,7 @@ void malloc_failure(void *data){
 
 int main(void){
 
-    printf("C file\n----------------------\n");
+    printf("C++ file\n----------------------\n");
 
     MemTrack_Context ctx = {0};
     Set_MemTrack_Context(&ctx);
@@ -21,7 +22,9 @@ int main(void){
 
     Set_Malloc_Error_Function(malloc_failure, NULL);
 
-    int *array = t_malloc(999999);
+
+
+    int *array = (int *)t_malloc(999999);
 
     if(!array)
         printf("array is null\n");

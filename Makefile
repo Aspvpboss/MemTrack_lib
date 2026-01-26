@@ -11,8 +11,9 @@ OUTPUT = ./build/out_c.exe
 
 
 
-default: json build run
+default: c_all cpp_all 
 
+c_all: json build run
 
 json:
 	@compiledb -n -- make build
@@ -27,8 +28,15 @@ run:
 
 
 G++ = g++
-
+OUTPUT_CPP = build/out_cpp.exe
 
 
 cpp_all: json build_cpp run_cpp
+
+
+build_cpp:
+	@${G++} main.cpp -o ${OUTPUT_CPP} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS ${FLAGS}
+
+run_cpp:
+	@${OUTPUT_CPP}
 
