@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 
+
 void malloc_failure(void *data){
     printf("\ndub\n");
 }
@@ -23,7 +24,7 @@ int main(void){
     int *array = t_malloc(999999);
 
     if(!array)
-        printf("is null\n");
+        printf("array is null\n");
 
     // array[2] = 1;
 
@@ -31,11 +32,11 @@ int main(void){
 
     if(!array){
 
-        printf("is null\n");
+        printf("is null after free\n");
 
     } else{
 
-        printf("isn't null\n");
+        printf("isn't null after free\n");
 
     }
         
