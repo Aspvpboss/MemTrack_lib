@@ -1,21 +1,20 @@
 
 GCC = gcc
 
-
+INCLUDE_LIB_TEST = -Ilib/include
 INCLUDE_LIB = -IMemTrack
 SRC_LIB = lib/src/*.c
 
 
-FLAGS = -Wall -Werror -Wpedantic -pedantic
+FLAGS = -Wall -Werror -Wpedantic
 OUTPUT = build/out.exe
 
-DLL_FLAGS = -fPIC -shared  -Wl,--out-implib,libMemTrack.a
-DLL_OUTPUT = libMemTrack.dll
 
-default: json build run
+default: build_test run
 
-json:
-	@compiledb -n -- make build
+
+build_test:  
+	@${GCC} main.c lib/src/memtrack.c -o ${OUTPUT} ${INCLUDE_LIB_TEST} -DTRACK_ALLOCATIONS  ${FLAGS}  
 
 build:  
 	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS  ${FLAGS}  
