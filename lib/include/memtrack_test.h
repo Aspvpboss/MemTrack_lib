@@ -168,6 +168,7 @@ extern "C"{
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #define TRACK_MALLOC(size) malloc(size)
 #define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
@@ -188,19 +189,6 @@ typedef struct Mem_Info{
 
 } Mem_Info;
 
-
-typedef struct{
-
-    void (*fail_handler)(void*);
-    void *handler_arg;
-    struct{
-        bool memory_failure_abort;
-        bool auto_null_pointers;
-        bool print_error_info;
-    } config;
-
-
-} MemTrack_Context;
 
 
 size_t check_memory_usage();

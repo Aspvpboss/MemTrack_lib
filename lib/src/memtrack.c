@@ -3,12 +3,50 @@
 
 //linked_list.c
 
-static Mem_Info *head = NULL;
-static Mem_Info *tail = NULL;
+typedef struct{
+
+    Mem_Info *head;
+    Mem_Info *tail;
+    void (*fail_handler)(void*);
+    void *handler_arg;
+    bool memory_failure_abort;
+    bool auto_null_pointers;
+    bool init;
+    pthread_mutex_t mutex;
+
+} Track_Info;
+
+static Track_Info info = {0};
+
+
+
+int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort){
+
+    if(info.init){
+        TRACK_PRINTF("Memtrack already initialized\n");
+        return 1;
+    }
+
+    if(pthread_mutex_init(&info.mutex, NULL)) return 1;
+
+    info.head = NULL;
+    info.tail = NULL;
+
+    info.auto_null_pointers = auto_null_pointers;
+    info.memory_failure_abort = memory_failure_abort;
+
+    info.fail_handler = malloc_fail_handler;
+    info.handler_arg = handler_arg;
+
+    return 0;
+}
+
+
 
 
 void free_tracking_info(){
-    Mem_Info *current = head;
+
+    Mem_Info *current = info.head;
     Mem_Info *next = NULL;
 
     while(current){
@@ -18,14 +56,17 @@ void free_tracking_info(){
         current = next;
     }
 
-    head = NULL;
-    tail = NULL;
+    info.head = NULL;
+    info.tail = NULL;
 }
 
 
 
 size_t check_memory_usage(){
-    Mem_Info *current = head;
+
+    pthread_mutex_lock(info.mutex);
+
+    Mem_Info *current = info.head;
     size_t total = 0;
 
     while(current){
@@ -33,6 +74,7 @@ size_t check_memory_usage(){
         current = current->next;
     }
 
+    
     return total;
 }
 
@@ -137,41 +179,6 @@ int delete_allocation(void *check_ptr){
 
 
 //alloc.c
-
-static MemTrack_Context *ctx = NULL;
-
-int check_context_init(){
-
-    if(!ctx){
-        TRACK_PRINTF("MemTrack ERROR: Set_MemTrack_Context hasn't been called yet\naborting program\n");
-        TRACK_EXIT;
-        return 0;
-    }
-        
-
-    return 1;
-}
-
-
-void Set_MemTrack_Context(MemTrack_Context *e_ctx){
-
-    ctx = e_ctx;
-    ctx->config.auto_null_pointers = false;
-    ctx->config.memory_failure_abort = false;
-    ctx->config.print_error_info = false;
-
-}
-
-
-void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg){
-
-    if(!check_context_init())
-        return;
-    ctx->fail_handler = function;
-    ctx->handler_arg = function_arg;
-
-    return;
-}
 
 
 
