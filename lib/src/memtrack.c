@@ -27,7 +27,7 @@ int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool aut
         return 1;
     }
 
-    if(pthread_mutex_init(&info.mutex, NULL)) return 1;
+    if(TRACK_MUTEX_CREATE(info.mutex)) return 1;
 
     info.head = NULL;
     info.tail = NULL;
@@ -64,7 +64,7 @@ void free_tracking_info(){
 
 size_t check_memory_usage(){
 
-    pthread_mutex_lock(info.mutex);
+    TRACK_MUTEX_LOCK(info.mutex);
 
     Mem_Info *current = info.head;
     size_t total = 0;
@@ -74,6 +74,7 @@ size_t check_memory_usage(){
         current = current->next;
     }
 
+    TRACK_MUTEX_UNLOCK(info.mutex);
     
     return total;
 }

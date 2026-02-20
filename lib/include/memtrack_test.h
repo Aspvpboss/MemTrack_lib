@@ -170,6 +170,7 @@ extern "C"{
 #include <stdbool.h>
 #include <pthread.h>
 
+// changes these macros to use what functions you want, be careful
 #define TRACK_MALLOC(size) malloc(size)
 #define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
 #define TRACK_FREE(ptr) free(ptr)
@@ -178,6 +179,11 @@ extern "C"{
 #define TRACK_STRCPY(dst, src) strcpy(dst, src)
 #define TRACK_STRDUP(str) strdup(str)
 #define TRACK_EXIT exit(EXIT_FAILURE)
+
+#define TRACK_MUTEX_TYPE pthread_mutex_t 
+#define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(mutex)
+#define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(mutex)
 
 typedef struct Mem_Info{
 
