@@ -59,6 +59,8 @@ void MemTrack_Quit(){
         current = next;
     }
 
+    TRACK_MUTEX_DESTROY(info.mutex);
+
     info.head = NULL;
     info.tail = NULL;
 }

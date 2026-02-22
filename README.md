@@ -34,6 +34,7 @@ I wrote this library in a way to configure it as you want. If you just want to t
 - #define TRACK_EXIT exit(EXIT_FAILURE)
 - #define TRACK_MUTEX_TYPE pthread_mutex_t 
 - #define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+- #define TRACK_MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex)
 - #define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(mutex)
 - #define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(mutex)
 

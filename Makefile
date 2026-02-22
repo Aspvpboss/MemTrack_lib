@@ -36,7 +36,10 @@ OUTPUT_CPP = build/out_cpp.exe
 
 
 cpp_all: build_cpp run_cpp
+cpp_test: build_test_cpp run_cpp
 
+build_test_cpp:
+	@${G++} main.cpp lib/src/memtrack.c -o ${OUTPUT_CPP} ${INCLUDE_LIB_TEST} -DTRACK_ALLOCATIONS ${FLAGS}
 
 build_cpp:
 	@${G++} main.cpp -o ${OUTPUT_CPP} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS ${FLAGS}

@@ -76,6 +76,7 @@ extern "C"{
 
 #define TRACK_MUTEX_TYPE pthread_mutex_t 
 #define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#define TRACK_MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex)
 #define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
 #define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
 
@@ -168,6 +169,8 @@ MEMTRACK_API char* debug_strdup(const char* src, const char *file, int line);
 
 #ifdef MEMTRACK_IMPLEMENTATION
 
+//linked_list.c
+
 typedef struct{
 
     Mem_Info *head;
@@ -223,6 +226,8 @@ void MemTrack_Quit(){
         TRACK_FREE(current);
         current = next;
     }
+
+    TRACK_MUTEX_DESTROY(info.mutex);
 
     info.head = NULL;
     info.tail = NULL;
