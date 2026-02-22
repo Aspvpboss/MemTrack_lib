@@ -1,4 +1,3 @@
-#define MEMTRACK_IMPLEMENTATION 
 
 #include "memtrack_test.h"
 
