@@ -21,136 +21,7 @@
 */
 
 
-/*
-    DOCUMENTATION
 
-    This library tracks allocations and can report memory leaks; furthermore, it can also
-    get heap usage and automatically null pointers after freeing them and exiting the program if malloc fails.
-
-    As of right now this library doesn't support multi-threaded programs; however, multi-threading will be support soon
-
-    I wrote this library in a way to configure it as you want. If you just want to track allocations when debugging, then
-    only use the normal malloc and free during runtime you can do that. Or if you want it to null pointers when freed
-    during runtime and check for malloc failure during runtime, in exchange for a very some performance hit.
-
-    when compiling use the these macros to configure the library
-    I use gcc so I use -Dmacro_name to define a global macro when compiling
-
-
-    #define STDLIB_ALLOCATIONS - this uses stdlib malloc and free 
-
-    #define TRACK_ALLOCATIONS - this uses my tracking malloc and free functions 
-
-    NO MACRO defined - this doesn't track allocations, however it still uses my malloc and free functions 
-                       which allows for auto nulling pointers and exiting if malloc failure
-
-
-    INITIALIZING 
-
-        First, you must define the MEMTRACK_IMPLEMENTATION macro to paste the functions in, then include the memtrack header.
-        You only need to define the MEMTRACK_IMPLEMENTATION once in one C file
-
-        Second, you must create a MemTrack_Context variable, either using malloc or the stack (whichever you prefer).
-        Then, you must call the function Set_MemTrack_Context(), and pass in the pointer of the defined MemTrack_Context.
-
-        After that you can set the specific configs of memtrack using the MemTrack_Context. 
-        
-        These are the vars you can configs in MemTrack_Context, Importantly, the configs only work
-        if you aren't using STDLIB_ALLOCATIONS so be aware.
-
-            bool memory_failure_abort; if true, will exit program if malloc fails
-            bool auto_null_pointers; if true, will automatically set freed pointers to null
-            bool print_error_info; if true, will print debug info with memtrack_print functions
-
-        Optionally, if the memory_failure_abort config is true, you can set a function to run before the program
-        exit. Use the Set_Malloc_Error_Function() to set the function and data, it won't fail or crash if memory_failure_abort
-        is false
-
-        Set_Malloc_Error_Function() takes a functions pointer that returns void and takes a void* as a parameter, then 
-        the void *data 
-
-        Internally when the function is called, it passes the void *data into the function
-
-    
-    USING MEMTRACK 
-
-    Here are the main functions and macros this library provides 
-    
-        FUNCTIONS
-
-            size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
-            int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
-            void print_tracking_info(); // prints all tracking information
-            void free_tracking_info(); // should always be called at the end of a program to free tracking_info
-
-            //if you don't call this, then no functions will be called if malloc returns NULL
-            void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
-
-            //you must call this *before* you set the values within MemTrack_Context because it zeros all values
-            void Set_MemTrack_Context(MemTrack_Context *e_ctx);
-
-        MACROS 
-
-            These macro definitions change depending on what global macro you define (you can look at the changes below in the header),
-            but these are the generic args you give them
-
-            void* t_malloc(size_t size);
-
-            void* t_realloc(void *mem, size_t size);
-            
-            void t_free(void *mem); 
-
-            char* t_strdup(const char *string);
-
-
-    EXAMPLE PROGRAM
-
-        #define MEMTRACK_IMPLEMENTATION
-        #include "memtrack.h"
-        #include <stdio.h>
-
-
-        void malloc_failure(void *data){
-            printf("\ndub\n");
-        }
-
-        int main(void){
-
-            MemTrack_Context ctx = {0};
-            Set_MemTrack_Context(&ctx);
-            ctx.config.auto_null_pointers = false;
-            ctx.config.print_error_info = true;
-            ctx.config.memory_failure_abort = true;
-
-            Set_Malloc_Error_Function(malloc_failure, NULL);
-
-            int *array = t_malloc(999999);
-
-            if(!array)
-                printf("is null\n");
-
-            t_free(array);
-
-            if(!array){
-
-                printf("is null\n");
-
-            } else{
-
-                printf("isn't null\n");
-
-            }
-                
-
-            if(check_memory_leak())
-                print_tracking_info();
-
-            free_tracking_info();
-
-            return 0;
-        }
-
-*/
 
 
 
@@ -171,10 +42,17 @@ extern "C"{
 #include <pthread.h>
 
 // changes these macros to use what functions you want, be careful
+
+#ifndef NDEBUG
+    #define TRACK_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
+#else 
+    #define TRACK_PRINTF(fmt, ...)
+#endif
+
+
 #define TRACK_MALLOC(size) malloc(size)
 #define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
 #define TRACK_FREE(ptr) free(ptr)
-#define TRACK_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #define TRACK_STRLEN(str) strlen(str)
 #define TRACK_STRCPY(dst, src) strcpy(dst, src)
 #define TRACK_STRDUP(str) strdup(str)
@@ -199,17 +77,12 @@ typedef struct Mem_Info{
 
 size_t check_memory_usage();
 void print_tracking_info();
-void free_tracking_info();
 int check_memory_leak();
 
+// init and quit should only be called on main thread
+void MemTrack_Quit();
+int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
 
-
-
-//if you don't call this, then no functions will be called if malloc returns NULL
-void Set_Malloc_Error_Function(void(*function)(void*), void *function_arg);
-
-//you must call this *before* you set the values within MemTrack_Context
-void Set_MemTrack_Context(MemTrack_Context *e_ctx);
 
 void safe_free(void **mem);
 void* safe_malloc(size_t size);

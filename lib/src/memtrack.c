@@ -12,7 +12,7 @@ typedef struct{
     bool memory_failure_abort;
     bool auto_null_pointers;
     bool init;
-    pthread_mutex_t mutex;
+    TRACK_MUTEX_TYPE mutex;
 
 } Track_Info;
 
@@ -34,6 +34,7 @@ int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool aut
 
     info.auto_null_pointers = auto_null_pointers;
     info.memory_failure_abort = memory_failure_abort;
+    info.init = true;
 
     info.fail_handler = malloc_fail_handler;
     info.handler_arg = handler_arg;
@@ -44,10 +45,12 @@ int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool aut
 
 
 
-void free_tracking_info(){
+void MemTrack_Quit(){
 
     Mem_Info *current = info.head;
     Mem_Info *next = NULL;
+
+    if(!current) return;
 
     while(current){
         next = current->next;
@@ -82,8 +85,14 @@ size_t check_memory_usage(){
 
 int check_memory_leak(){
 
-    if(head || tail)
+    TRACK_MUTEX_LOCK(info.mutex);
+    
+    if(info.head || info.tail){
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return 1;
+    }
+
+    TRACK_MUTEX_UNLOCK(info.mutex);
 
     return 0;
 }
@@ -92,10 +101,14 @@ int check_memory_leak(){
 
 void print_tracking_info(){
 
-    Mem_Info *current = head;
+    TRACK_MUTEX_LOCK(info.mutex);
+    
+    Mem_Info *current = info.head;
 
-    if(!current)
+    if(!current){
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return;
+    }
 
     TRACK_PRINTF("\nAllocation Information\n");
     while(current){
@@ -104,40 +117,54 @@ void print_tracking_info(){
     }
     TRACK_PRINTF("\n"); 
 
+    TRACK_MUTEX_UNLOCK(info.mutex);
+
 }
 
 
 int append_allocation(void *ptr, char *file, int line, size_t size){
+
+    TRACK_MUTEX_LOCK(info.mutex);
+
     Mem_Info *node = TRACK_MALLOC(sizeof(Mem_Info));
-    if(!node)
+    if(!node){
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return 1;
+    }
     node->size = size;
     node->ptr = ptr;
     node->file_name = TRACK_STRDUP(file);
     node->file_line = line;
 
-    if(tail){
+    if(info.tail){
 
-        tail->next = node;
-        tail = node;
-        tail->next = NULL;
+        info.tail->next = node;
+        info.tail = node;
+        info.tail->next = NULL;
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return 0;
     }
 
-    if(!head){
+    if(!info.head){
 
-        head = node;
-        head->next = NULL;
-        tail = head;
+        info.head = node;
+        info.head->next = NULL;
+        info.tail = info.head;
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return 0;
     }
 
+    TRACK_MUTEX_UNLOCK(info.mutex);
+    
     return 1;
 }
 
 
 int delete_allocation(void *check_ptr){
-    Mem_Info *current = head;
+    
+    TRACK_MUTEX_LOCK(info.mutex);
+    
+    Mem_Info *current = info.head;
     Mem_Info *prev = NULL;
 
     while(current && current->ptr != check_ptr){
@@ -148,6 +175,7 @@ int delete_allocation(void *check_ptr){
     }
 
     if(!current){
+        TRACK_MUTEX_UNLOCK(info.mutex);
         return 1;
     }
 
@@ -157,22 +185,24 @@ int delete_allocation(void *check_ptr){
     
     } else if(current->next && !prev){ // head, not tail
 
-        head = current->next;
+        info.head = current->next;
 
     } else if(!current->next && prev){ // not head, tail
 
         prev->next = NULL;
-        tail = prev;
+        info.tail = prev;
 
     } else{ // one node
 
-        head = NULL;
-        tail = NULL;
+        info.head = NULL;
+        info.tail = NULL;
 
     }
     
     TRACK_FREE(current->file_name);
     TRACK_FREE(current);
+    
+    TRACK_MUTEX_UNLOCK(info.mutex);
 
     return 0;
 }
@@ -190,12 +220,12 @@ void check_malloc_error(void *mem){
     if(mem || !check_context_init())
         return;
 
-    if(ctx->fail_handler)
-        (*ctx->fail_handler)(ctx->handler_arg);
+    if(info.fail_handler)
+        (*info.fail_handler)(info.handler_arg);
 
     TRACK_PRINTF("MemTrack ERROR: malloc failed\n");
 
-    if(ctx->config.memory_failure_abort)
+    if(info.memory_failure_abort)
         TRACK_EXIT;
     
     return; 
@@ -206,12 +236,12 @@ void debug_check_malloc_error(void *mem, char *file, int line){
     if(mem || !check_context_init())
         return;
 
-    if(ctx->fail_handler)
-        (*ctx->fail_handler)(ctx->handler_arg);
+    if(info.fail_handler)
+        (*info.fail_handler)(info.handler_arg);
 
     TRACK_PRINTF("MemTrack ERROR: malloc failed for file %s, line - %d\n", file, line);
     
-    if(ctx->config.memory_failure_abort)
+    if(info.memory_failure_abort)
         TRACK_EXIT;
     
     return; 
@@ -219,7 +249,7 @@ void debug_check_malloc_error(void *mem, char *file, int line){
 
 
 char* safe_strdup(const char *src){
-    char *new_mem = strdup(src);
+    char *new_mem = TRACK_STRDUP(src);
     check_malloc_error(new_mem);
     return new_mem;
 }
@@ -244,7 +274,7 @@ void safe_free(void **mem){
 
     TRACK_FREE(*mem);
 
-    if(ctx->config.auto_null_pointers)
+    if(info.auto_null_pointers)
         *mem = NULL;
 
 }
@@ -256,14 +286,13 @@ void debug_free(void **mem, char *file, int line){
 
     if(delete_allocation(*mem)){
 
-        if(ctx->config.print_error_info)
-            TRACK_PRINTF("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+        TRACK_PRINTF("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
 
         return;
     }
     TRACK_FREE(*mem);
 
-    if(ctx->config.auto_null_pointers)
+    if(info.auto_null_pointers)
         *mem = NULL;
     
 }
@@ -281,8 +310,7 @@ void* debug_malloc(size_t size, char *file, int line){
     if(append_allocation(mem, file, line, size)){
         TRACK_FREE(mem);
 
-        if(ctx->config.print_error_info)
-            TRACK_PRINTF("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+        TRACK_PRINTF("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
 
         return NULL;    
     }
@@ -301,8 +329,7 @@ void* debug_realloc(void *mem, size_t size, char *file, int line){
 
     if(delete_allocation(mem)){
 
-        if(ctx->config.print_error_info)
-            TRACK_PRINTF("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
+        TRACK_PRINTF("MemTrack ERROR: failed to free old tracking info for file %s, line - %d\n", file, line);
 
         return NULL;
     }
@@ -317,8 +344,7 @@ void* debug_realloc(void *mem, size_t size, char *file, int line){
     if(append_allocation(new_mem, file, line, size)){
         TRACK_FREE(new_mem);
 
-        if(ctx->config.print_error_info)
-            TRACK_PRINTF("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
+        TRACK_PRINTF("MemTrack ERROR: failed to malloc tracking info for file %s, line - %d\n", file, line);
 
         return NULL;            
     }
@@ -334,7 +360,7 @@ char* debug_strdup(const char* src, char *file, int line){
 
     size_t src_len = TRACK_STRLEN(src);
 
-    char *dup = debug_malloc(sizeof(char) * (src_len + 1), file, line);
+    char *dup = (char *)debug_malloc(sizeof(char) * (src_len + 1), file, line);
     if(!dup)
         return NULL;
 
