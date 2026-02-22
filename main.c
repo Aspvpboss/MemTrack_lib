@@ -1,34 +1,35 @@
-#define MEMTRACK_IMPLEMENTATION 
-
+#define MEMTRACK_IMPLEMENTATION
 #include "memtrack.h"
-#include <stdio.h>
-
-
+#include <pthread.h>
 
 void malloc_failure(void *data){
     printf("\ndub\n");
 }
 
+
+void* thread_func(void *arg){
+    return t_malloc(100);
+}
+
+
+
 int main(void){
 
-    printf("C file\n----------------------\n");
+    MemTrack_Init(malloc_failure, NULL, true, true);
 
-    MemTrack_Context ctx = {0};
-    Set_MemTrack_Context(&ctx);
-    ctx.config.auto_null_pointers = false;
-    ctx.config.print_error_info = true;
-    ctx.config.memory_failure_abort = true;
+    pthread_t thread;
 
-    Set_Malloc_Error_Function(malloc_failure, NULL);
+    if(pthread_create(&thread, NULL, thread_func, NULL)){
+        return 1;
+    } 
 
     int *array = t_malloc(999999);
 
     if(!array)
         printf("array is null\n");
 
-    // array[2] = 1;
 
-    // t_free(array);
+    t_free(array);
 
     if(!array){
 
@@ -39,14 +40,16 @@ int main(void){
         printf("isn't null after free\n");
 
     }
-        
+   
+    
+
+    void *result = NULL;
+    pthread_join(thread, &result);
 
     if(check_memory_leak())
         print_tracking_info();
-
     
-
-    free_tracking_info();
+    MemTrack_Quit();
 
     return 0;
 }
