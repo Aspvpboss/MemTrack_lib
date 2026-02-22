@@ -1,4 +1,6 @@
 
+### MemTrack v1.1
+
 # Documentation
 
 This library tracks allocations and can report memory leaks; furthermore, it can also
