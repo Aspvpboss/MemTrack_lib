@@ -122,11 +122,11 @@ void print_tracking_info(){
 }
 
 
-int append_allocation(void *ptr, char *file, int line, size_t size){
+int append_allocation(void *ptr, const char *file, int line, size_t size){
 
     TRACK_MUTEX_LOCK(info.mutex);
 
-    Mem_Info *node = TRACK_MALLOC(sizeof(Mem_Info));
+    Mem_Info *node = (Mem_Info *)TRACK_MALLOC(sizeof(Mem_Info));
     if(!node){
         TRACK_MUTEX_UNLOCK(info.mutex);
         return 1;
@@ -217,7 +217,7 @@ int delete_allocation(void *check_ptr){
 
 void check_malloc_error(void *mem){
 
-    if(mem || !check_context_init())
+    if(mem || info.init)
         return;
 
     if(info.fail_handler)
@@ -231,9 +231,9 @@ void check_malloc_error(void *mem){
     return; 
 }
 
-void debug_check_malloc_error(void *mem, char *file, int line){
+void debug_check_malloc_error(void *mem, const char *file, int line){
 
-    if(mem || !check_context_init())
+    if(mem || info.init)
         return;
 
     if(info.fail_handler)
@@ -279,7 +279,7 @@ void safe_free(void **mem){
 
 }
 
-void debug_free(void **mem, char *file, int line){
+void debug_free(void **mem, const char *file, int line){
 
     if(!mem || !(*mem))
         return;
@@ -298,7 +298,7 @@ void debug_free(void **mem, char *file, int line){
 }
 
 
-void* debug_malloc(size_t size, char *file, int line){
+void* debug_malloc(size_t size, const char *file, int line){
 
     void *mem = TRACK_MALLOC(size);
 
@@ -319,7 +319,7 @@ void* debug_malloc(size_t size, char *file, int line){
 }
 
 
-void* debug_realloc(void *mem, size_t size, char *file, int line){
+void* debug_realloc(void *mem, size_t size, const char *file, int line){
 
     if(!mem){
         void *new_mem = debug_malloc(size, file, line);
@@ -353,7 +353,7 @@ void* debug_realloc(void *mem, size_t size, char *file, int line){
     return new_mem;
 }
 
-char* debug_strdup(const char* src, char *file, int line){
+char* debug_strdup(const char* src, const char *file, int line){
 
     if(!src)
         return NULL;

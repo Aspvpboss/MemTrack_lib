@@ -52,80 +52,107 @@ If you are using the memory_failure_abort config, the malloc failure function yo
 
 Importantly, if you're using the macro STDLIB_ALLOCATIONS, the auto_null_pointers and memory_failure_abort bools will do nothing
 
+# Using MemTrack
 
-# USING MEMTRACK 
+Here are the main functions and macros this library provides, most of these functions support multi-threading 
 
-Here are the main functions and macros this library provides 
-
-    FUNCTIONS
-
-        size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
-        int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
-        void print_tracking_info(); // prints all tracking information
+## Functions
 
 
-        // memtrack init and quit should be called only on the main thread after other threads using memtrack are cleaned up
-        // if you call memtrack init more than once, it will just return 1 and nothing will happen
-        int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
-        void MemTrack_Quit();
+MemTrack_Init and MemTrack_Quit are the only functions that should only be called on the main thread
 
-    MACROS 
+    int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);     
+    // returns 1 if failure or if called more than once
 
-        These macro definitions change depending on what global macro you define (you can look at the changes below in the header),
-        but these are the generic args you give them
-
-        void* t_malloc(size_t size);
-
-        void* t_realloc(void *mem, size_t size);
-        
-        void t_free(void *mem); 
-
-        char* t_strdup(const char *string);
+    void MemTrack_Quit(); // call this after all other threads are cleaned up
 
 
-EXAMPLE PROGRAM
-
-    #define MEMTRACK_IMPLEMENTATION
-    #include "memtrack.h"
-    #include <stdio.h>
+    size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
+    int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
+    void print_tracking_info(); // prints all tracking information
 
 
-    void malloc_failure(void *data){
-        printf("\ndub\n");
+
+## Macros
+
+These macro definitions change depending on what compiler macro you define, but these are the generic args you give them. All of these macros support multi-threading
+
+    void* t_malloc(size_t size);
+
+    void* t_realloc(void *mem, size_t size);
+    
+    void t_free(void *mem); 
+
+    char* t_strdup(const char *string);
+
+
+# Example Program
+
+```c
+#define MEMTRACK_IMPLEMENTATION
+#include "memtrack.h"
+#include <pthread.h>
+
+void malloc_failure(void *data){
+    printf("\ndub\n");
+}
+
+
+void* thread_func(void *arg){
+    return t_malloc(100);
+}
+
+
+
+int main(void){
+
+    MemTrack_Init(malloc_failure, NULL, true, true);
+
+    pthread_t thread;
+
+    if(pthread_create(&thread, NULL, thread_func, NULL)){
+        return 1;
+    } 
+
+    int *array = t_malloc(999999);
+
+    if(!array)
+        printf("array is null\n");
+
+
+    t_free(array);
+
+    if(!array){
+
+        printf("is null after free\n");
+
+    } else{
+
+        printf("isn't null after free\n");
+
     }
+   
+    
 
-    int main(void){
+    void *result = NULL;
+    pthread_join(thread, &result);
 
-        MemTrack_Context ctx = {0};
-        Set_MemTrack_Context(&ctx);
-        ctx.config.auto_null_pointers = false;
-        ctx.config.print_error_info = true;
-        ctx.config.memory_failure_abort = true;
+    if(check_memory_leak())
+        print_tracking_info();
+    
+    MemTrack_Quit();
 
-        Set_Malloc_Error_Function(malloc_failure, NULL);
+    return 0;
+}
+```
 
-        int *array = t_malloc(999999);
+output of program
 
-        if(!array)
-            printf("is null\n");
+```
+is null after free
 
-        t_free(array);
+Allocation Information
+size 100 - Line 13 - File main.c
+```
 
-        if(!array){
 
-            printf("is null\n");
-
-        } else{
-
-            printf("isn't null\n");
-
-        }
-            
-
-        if(check_memory_leak())
-            print_tracking_info();
-
-        free_tracking_info();
-
-        return 0;
-    }

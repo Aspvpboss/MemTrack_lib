@@ -13,7 +13,7 @@ OUTPUT = ./build/out_c.exe
 
 default: build_test run
 
-c_all: build_test run
+c_all: build run
 
 
 
@@ -22,8 +22,8 @@ c_all: build_test run
 build_test:  
 	@${GCC} main.c lib/src/memtrack.c -o ${OUTPUT} ${INCLUDE_LIB_TEST} -DTRACK_ALLOCATIONS  ${FLAGS}  
 
-# build:  
-# 	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS  ${FLAGS}  
+build:  
+	@${GCC} main.c -o ${OUTPUT} ${INCLUDE_LIB} -DTRACK_ALLOCATIONS  ${FLAGS}  
 
 run:
 	@${OUTPUT}

@@ -22,9 +22,6 @@
 
 
 
-
-
-
 #ifndef MEMTRACK_test_H
 #define MEMTRACK_test_H 
 
@@ -33,6 +30,25 @@
 extern "C"{
 #endif
 
+
+// uncomment this for use in DLLs
+// #define MEMTRACK_DLL
+
+#if defined(MEMTRACK_DLL)
+
+    #if defined(_WIN32)
+        #if defined(MEMTRACK_BUILD_DLL)
+            #define MEMTRACK_API __declspec(dllexport)
+        #else
+            #define MEMTRACK_API __declspec(dllimport)
+        #endif
+    #else
+        #define MEMTRACK_API __attribute__((visibility("default")))
+    #endif
+
+#else
+    #define MEMTRACK_API
+#endif
 
 
 #include <stdio.h>
@@ -60,8 +76,8 @@ extern "C"{
 
 #define TRACK_MUTEX_TYPE pthread_mutex_t 
 #define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
-#define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(mutex)
-#define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(mutex)
+#define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
+#define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
 
 typedef struct Mem_Info{
 
@@ -75,24 +91,24 @@ typedef struct Mem_Info{
 
 
 
-size_t check_memory_usage();
-void print_tracking_info();
-int check_memory_leak();
+MEMTRACK_API size_t check_memory_usage();
+MEMTRACK_API void print_tracking_info();
+MEMTRACK_API int check_memory_leak();
 
 // init and quit should only be called on main thread
-void MemTrack_Quit();
-int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
+MEMTRACK_API void MemTrack_Quit();
+MEMTRACK_API int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
 
 
-void safe_free(void **mem);
-void* safe_malloc(size_t size);
-void* safe_realloc(void *memory, size_t size);
-char* safe_strdup(const char *src);
+MEMTRACK_API void safe_free(void **mem);
+MEMTRACK_API void* safe_malloc(size_t size);
+MEMTRACK_API void* safe_realloc(void *memory, size_t size);
+MEMTRACK_API char* safe_strdup(const char *src);
 
-void debug_free(void **mem, char *file, int line);
-void* debug_malloc(size_t size, char *file, int line);
-void* debug_realloc(void *mem, size_t size, char *file, int line);
-char* debug_strdup(const char* src, char *file, int line);
+MEMTRACK_API void debug_free(void **mem, const char *file, int line);
+MEMTRACK_API void* debug_malloc(size_t size, const char *file, int line);
+MEMTRACK_API void* debug_realloc(void *mem, size_t size, const char *file, int line);
+MEMTRACK_API char* debug_strdup(const char* src, const char *file, int line);
 
 
 
@@ -150,7 +166,6 @@ char* debug_strdup(const char* src, char *file, int line);
 #ifdef __cplusplus
 }
 #endif
-
 
 
 #endif
