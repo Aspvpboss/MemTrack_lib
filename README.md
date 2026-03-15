@@ -1,5 +1,4 @@
-
-### MemTrack v1.1
+### MemTrack v1.2
 
 # Documentation
 
@@ -73,7 +72,7 @@ MemTrack_Init and MemTrack_Quit are the only functions that should only be calle
     size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
     int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
     void print_tracking_info(); // prints all tracking information
-
+    int MemTrack_GetVersion(int *major, int *minor); // gets the version of memtrack, returns 1 if failure
 
 
 ## Macros
@@ -147,15 +146,3 @@ int main(void){
 
     return 0;
 }
-```
-
-output of program
-
-```
-is null after free
-
-Allocation Information
-size 100 - Line 13 - File main.c
-```
-
-
