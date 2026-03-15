@@ -17,7 +17,7 @@ c_all: build run
 
 
 
-
+.PHONY: build_test build run c_all
 
 build_test:  
 	@${GCC} main.c lib/src/memtrack.c -o ${OUTPUT} ${INCLUDE_LIB_TEST} -DTRACK_ALLOCATIONS  ${FLAGS}  

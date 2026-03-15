@@ -96,7 +96,7 @@ MemTrack_Init and MemTrack_Quit are the only functions that should only be calle
     size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
     int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
     void print_tracking_info(); // prints all tracking information
-
+    int MemTrack_GetVersion(int *major, int *minor); // gets the version of memtrack, returns 1 if failure
 
 
 ## Macros
@@ -185,22 +185,22 @@ size 100 - Line 13 - File main.c
 
 */
 
-#ifndef MEMTRACK_SDLite_H
-#define MEMTRACK_SDLite_H 
+#ifndef MEMTRACK_MEMTRACK_H
+#define MEMTRACK_MEMTRACK_H 
 
 
 #ifdef __cplusplus 
 extern "C"{
 #endif
 
-#include "SDL3/SDL_log.h"
-#include "SDL3/SDL_stdinc.h"
-#include "SDL3/SDL_mutex.h"
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+#include <pthread.h>
 
 // uncomment this for use in DLLs
-#define MEMTRACK_DLL
+// #define MEMTRACK_DLL
 
 #if defined(MEMTRACK_DLL)
 
@@ -223,25 +223,25 @@ extern "C"{
 // changes these macros to use what functions you want, be careful
 
 #ifndef NDEBUG
-    #define TRACK_PRINTF(fmt, ...) SDL_Log(fmt, ##__VA_ARGS__)
+    #define TRACK_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #else 
     #define TRACK_PRINTF(fmt, ...)
 #endif
 
 
-#define TRACK_MALLOC(size) SDL_malloc(size)
-#define TRACK_REALLOC(mem, newsize) SDL_realloc(mem, newsize)
-#define TRACK_FREE(ptr) SDL_free(ptr)
-#define TRACK_STRLEN(str) SDL_strlen(str)
-#define TRACK_STRLCPY(dst, src, size) SDL_strlcpy(dst, src, size)
-#define TRACK_STRDUP(str) SDL_strdup(str)
+#define TRACK_MALLOC(size) malloc(size)
+#define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
+#define TRACK_FREE(ptr) free(ptr)
+#define TRACK_STRLEN(str) strlen(str)
+#define TRACK_STRLCPY(dst, src, size) memcpy(dst, src, size)
+#define TRACK_STRDUP(str) strdup(str)
 #define TRACK_EXIT exit(EXIT_FAILURE)
 
-#define TRACK_MUTEX_TYPE SDL_Mutex* 
-#define TRACK_MUTEX_CREATE(mutex) SDL_CreateMutex()
-#define TRACK_MUTEX_DESTROY(mutex) SDL_DestroyMutex(mutex)
-#define TRACK_MUTEX_LOCK(mutex) SDL_LockMutex(mutex)
-#define TRACK_MUTEX_UNLOCK(mutex) SDL_UnlockMutex(mutex)
+#define TRACK_MUTEX_TYPE pthread_mutex_t 
+#define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL) // you may have to change this if your mutex create function doesn't take the mutex as an arg
+#define TRACK_MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex)
+#define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
+#define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
 
 typedef struct Mem_Info{
 
@@ -262,7 +262,7 @@ MEMTRACK_API int check_memory_leak();
 // init and quit should only be called on main thread
 MEMTRACK_API void MemTrack_Quit();
 MEMTRACK_API int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
-
+MEMTRACK_API int MemTrack_GetVersion(int *major, int *minor);
 
 MEMTRACK_API void safe_free(void **mem);
 MEMTRACK_API void* safe_malloc(size_t size);
@@ -350,6 +350,17 @@ typedef struct{
 static Track_Info info = {0};
 
 
+int MemTrack_GetVersion(int *major, int *minor){
+
+    if(!major || !minor)
+        return 1;
+
+    *major = 1;
+    *minor = 2;
+
+    return 0;
+}
+
 
 int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort){
 
@@ -358,9 +369,10 @@ int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool aut
         return 1;
     }
 
-    info.mutex = TRACK_MUTEX_CREATE();
-
-    if(!info.mutex) return 1;
+    if(TRACK_MUTEX_CREATE(info.mutex)){
+        TRACK_PRINTF("Memtrack failed to create mutex\n");
+        return 1;
+    }
 
     info.head = NULL;
     info.tail = NULL;
