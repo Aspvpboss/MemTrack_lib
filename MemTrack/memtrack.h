@@ -20,16 +20,184 @@
     SOFTWARE.
 */
 
+/*
+
+### MemTrack v1.2
+
+# Documentation
+
+This library tracks allocations and can report memory leaks; furthermore, it can also
+get heap usage and automatically null pointers after freeing them and exiting the program if malloc fails.
+
+This library does support multi-threading, read the function docs for more info
+
+I wrote this library in a way to configure it as you want. If you just want to track allocations when debugging, then only use the normal malloc and free during runtime you can do that. Or if you want it to null pointers when freed during runtime and check for malloc failure during runtime, in exchange for a very small performance hit.
+
+#### when compiling use the these macros to configure the library. I use gcc so I use -Dmacro_name to define a global macro when compiling
+
+### Compiler Macros 
+- #define STDLIB_ALLOCATIONS - this uses stdlib malloc and free 
+
+- #define TRACK_ALLOCATIONS - this uses my tracking malloc and free functions 
+
+- #define NDEBUG - this will disable printf logging
+
+- NO MACRO defined - this doesn't track allocations, however it still uses the safe malloc and free functions which allows for auto nulling pointers and exiting if malloc failure
 
 
-#ifndef MEMTRACK_test_H
-#define MEMTRACK_test_H 
+
+####  There are macros that you can configure memtrack to use your own functions instead of the default ones it uses
+
+### Function Macros
+- #define TRACK_PRINTF(fmt, ...) printf(fmt, ##__VA_ARGS__)
+- #define TRACK_MALLOC(size) malloc(size)
+- #define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
+- #define TRACK_FREE(ptr) free(ptr)
+- #define TRACK_STRLEN(str) strlen(str)
+- #define TRACK_STRCPY(dst, src) strcpy(dst, src)
+- #define TRACK_STRDUP(str) strdup(str)
+- #define TRACK_EXIT exit(EXIT_FAILURE)
+- #define TRACK_MUTEX_TYPE pthread_mutex_t 
+- #define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+- #define TRACK_MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex)
+- #define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(mutex)
+- #define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(mutex)
+
+# Initializing
+
+First, you must define the MEMTRACK_IMPLEMENTATION macro to paste the functions in, then include the memtrack header. You only need to define the MEMTRACK_IMPLEMENTATION once in one C file
+
+    #define MEMTRACK_IMPLEMENTATION 
+    #include "memtrack.h"
+
+Secondly, in the main function, you need to call MemTrack_Init(); and use your desired configs
+
+    MemTrack_Init(NULL, NULL, false, false);
+
+If you are using the memory_failure_abort config, the malloc failure function you pass into the init function will run with the void* you pass into init if malloc fails
+
+Importantly, if you're using the macro STDLIB_ALLOCATIONS, the auto_null_pointers and memory_failure_abort bools will do nothing
+
+# Using MemTrack
+
+Here are the main functions and macros this library provides, most of these functions support multi-threading 
+
+## Functions
+
+
+MemTrack_Init and MemTrack_Quit are the only functions that should only be called on the main thread
+
+    int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);     
+    // returns 1 if failure or if called more than once
+
+    void MemTrack_Quit(); // call this after all other threads are cleaned up
+
+
+    size_t check_memory_usage(); // returns size_t of the amount of bytes used in heap
+    int check_memory_leak(); // returns 1 if there are tracked allocations, returns 0 if there aren't tracked allocations
+    void print_tracking_info(); // prints all tracking information
+    int MemTrack_GetVersion(int *major, int *minor); // gets the version of memtrack, returns 1 if failure
+
+
+## Macros
+
+These macro definitions change depending on what compiler macro you define, but these are the generic args you give them. All of these macros support multi-threading
+
+    void* t_malloc(size_t size);
+
+    void* t_realloc(void *mem, size_t size);
+    
+    void t_free(void *mem); 
+
+    char* t_strdup(const char *string);
+
+
+# Example Program
+
+```c
+#define MEMTRACK_IMPLEMENTATION
+#include "memtrack.h"
+#include <pthread.h>
+
+void malloc_failure(void *data){
+    printf("\ndub\n");
+}
+
+
+void* thread_func(void *arg){
+    return t_malloc(100);
+}
+
+
+
+int main(void){
+
+    MemTrack_Init(malloc_failure, NULL, true, true);
+
+    pthread_t thread;
+
+    if(pthread_create(&thread, NULL, thread_func, NULL)){
+        return 1;
+    } 
+
+    int *array = t_malloc(999999);
+
+    if(!array)
+        printf("array is null\n");
+
+
+    t_free(array);
+
+    if(!array){
+
+        printf("is null after free\n");
+
+    } else{
+
+        printf("isn't null after free\n");
+
+    }
+   
+    
+
+    void *result = NULL;
+    pthread_join(thread, &result);
+
+    if(check_memory_leak())
+        print_tracking_info();
+    
+    MemTrack_Quit();
+
+    return 0;
+}
+```
+
+output of program
+
+```
+is null after free
+
+Allocation Information
+size 100 - Line 13 - File main.c
+```
+
+
+
+*/
+
+#ifndef MEMTRACK_MEMTRACK_H
+#define MEMTRACK_MEMTRACK_H 
 
 
 #ifdef __cplusplus 
 extern "C"{
 #endif
 
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+#include <pthread.h>
 
 // uncomment this for use in DLLs
 // #define MEMTRACK_DLL
@@ -51,11 +219,6 @@ extern "C"{
 #endif
 
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <pthread.h>
 
 // changes these macros to use what functions you want, be careful
 
@@ -70,12 +233,12 @@ extern "C"{
 #define TRACK_REALLOC(mem, newsize) realloc(mem, newsize)
 #define TRACK_FREE(ptr) free(ptr)
 #define TRACK_STRLEN(str) strlen(str)
-#define TRACK_STRCPY(dst, src) strcpy(dst, src)
+#define TRACK_STRLCPY(dst, src, size) memcpy(dst, src, size)
 #define TRACK_STRDUP(str) strdup(str)
 #define TRACK_EXIT exit(EXIT_FAILURE)
 
 #define TRACK_MUTEX_TYPE pthread_mutex_t 
-#define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL)
+#define TRACK_MUTEX_CREATE(mutex) pthread_mutex_init(&mutex, NULL) // you may have to change this if your mutex create function doesn't take the mutex as an arg
 #define TRACK_MUTEX_DESTROY(mutex) pthread_mutex_destroy(&mutex)
 #define TRACK_MUTEX_LOCK(mutex) pthread_mutex_lock(&mutex)
 #define TRACK_MUTEX_UNLOCK(mutex) pthread_mutex_unlock(&mutex)
@@ -99,7 +262,7 @@ MEMTRACK_API int check_memory_leak();
 // init and quit should only be called on main thread
 MEMTRACK_API void MemTrack_Quit();
 MEMTRACK_API int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort);
-
+MEMTRACK_API int MemTrack_GetVersion(int *major, int *minor);
 
 MEMTRACK_API void safe_free(void **mem);
 MEMTRACK_API void* safe_malloc(size_t size);
@@ -187,6 +350,17 @@ typedef struct{
 static Track_Info info = {0};
 
 
+int MemTrack_GetVersion(int *major, int *minor){
+
+    if(!major || !minor)
+        return 1;
+
+    *major = 1;
+    *minor = 2;
+
+    return 0;
+}
+
 
 int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool auto_null_pointers, bool memory_failure_abort){
 
@@ -195,7 +369,10 @@ int MemTrack_Init(void(*malloc_fail_handler)(void*), void *handler_arg, bool aut
         return 1;
     }
 
-    if(TRACK_MUTEX_CREATE(info.mutex)) return 1;
+    if(TRACK_MUTEX_CREATE(info.mutex)){
+        TRACK_PRINTF("Memtrack failed to create mutex\n");
+        return 1;
+    }
 
     info.head = NULL;
     info.tail = NULL;
@@ -231,6 +408,7 @@ void MemTrack_Quit(){
 
     info.head = NULL;
     info.tail = NULL;
+    info.init = false;
 }
 
 
@@ -282,7 +460,7 @@ void print_tracking_info(){
 
     TRACK_PRINTF("\nAllocation Information\n");
     while(current){
-        TRACK_PRINTF("size %lld - Line %d - File %s\n", current->size, current->file_line, current->file_name);
+        TRACK_PRINTF("size %zu - Line %d - File %s\n", current->size, current->file_line, current->file_name);
         current = current->next;
     }
     TRACK_PRINTF("\n"); 
@@ -304,6 +482,11 @@ int append_allocation(void *ptr, const char *file, int line, size_t size){
     node->size = size;
     node->ptr = ptr;
     node->file_name = TRACK_STRDUP(file);
+    if(!node->file_name){
+        TRACK_FREE(node);
+        TRACK_MUTEX_UNLOCK(info.mutex);
+        return 1;
+    }
     node->file_line = line;
 
     if(info.tail){
@@ -387,7 +570,7 @@ int delete_allocation(void *check_ptr){
 
 void check_malloc_error(void *mem){
 
-    if(mem || info.init)
+    if(mem || !info.init)
         return;
 
     if(info.fail_handler)
@@ -403,7 +586,7 @@ void check_malloc_error(void *mem){
 
 void debug_check_malloc_error(void *mem, const char *file, int line){
 
-    if(mem || info.init)
+    if(mem || !info.init)
         return;
 
     if(info.fail_handler)
@@ -534,7 +717,7 @@ char* debug_strdup(const char* src, const char *file, int line){
     if(!dup)
         return NULL;
 
-    TRACK_STRCPY(dup, src);
+    TRACK_STRLCPY(dup, src, src_len + 1);
     dup[src_len] = '\0';
 
     return dup;
